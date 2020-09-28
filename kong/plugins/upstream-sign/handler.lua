@@ -9,6 +9,8 @@
 -- The handlers are based on the OpenResty handlers, see the OpenResty docs for details
 -- on when exactly they are invoked and what limitations each handler has.
 ---------------------------------------------------------------------------------------------
+local resty_md5 = require "resty.md5"
+local str = require "resty.string"
 
 
 
@@ -57,6 +59,69 @@ function plugin:rewrite(plugin_conf)
 
 end --]]
 
+local function gen_timestamp()
+    return os.time(os.date("!*t"))*1000
+end
+
+
+local function gen_md5(sign_str)
+  local md5 = resty_md5:new()
+  local ok = md5:update(sign_str)
+  if not ok then
+      ngx.log("failed to add data")
+      return
+  end
+  local digest = md5:final()
+  return string.upper(str.to_hex(digest))
+
+end
+
+
+local function pairsByKeys (t, f)
+  local a = {}
+  for n in pairs(t) do table.insert(a, n) end
+  table.sort(a, f)
+  local i = 0      -- iterator variable
+  local iter = function ()   -- iterator function
+    i = i + 1
+    if a[i] == nil then return nil
+    else return a[i], t[a[i]]
+    end
+  end
+  return iter
+end
+
+
+local function gen_digest(conf)
+     -- headers = kong.request.get_headers()
+     -- c7b5a9f76c4825c45cf845f179a93b15app_key28439329fieldstid,type,status,payment,orders,rx_audit_statusformatjsonmethodtaobao.trades.sold.getsession6102b27beeddc94be349c92a87d3e72889f1ebf106b24942206381427828sign_methodmd5timestamp1600962986224v2.0c7b5a9f76c4825c45cf845f179a93b15'
+   local params = {      
+        app_key = "28439329",
+        fields = "tid,type,status,payment,orders,rx_audit_status",
+        format = "json",
+        method = "taobao.trades.sold.get",
+        sign_method = "md5",
+        session = "6102b27beeddc94be349c92a87d3e72889f1ebf106b24942206381427828",       
+        timestamp = gen_timestamp(),
+        v = "2.0"
+    }
+   -- table.sort(headers)
+   local secret = "c7b5a9f76c4825c45cf845f179a93b15"
+   local tobe_signed = secret
+
+   for key, val in pairsByKeys(params) do
+      tobe_signed = tobe_signed..key..val
+   end
+   -- local tobe_signed = 'c7b5a9f76c4825c45cf845f179a93b15app_key28439329fieldstid,type,status,payment,orders,rx_audit_statusformatjsonmethodtaobao.trades.sold.getsession6102b27beeddc94be349c92a87d3e72889f1ebf106b24942206381427828sign_methodmd5timestamp1600962986224v2.0c7b5a9f76c4825c45cf845f179a93b15'
+   tobe_signed = tobe_signed..secret
+   local sign = gen_md5(tobe_signed)
+   params["sign"] =  sign
+
+   ngx.req.set_uri_args(params)
+   ngx.req.set_header("tobe_signed:", tobe_signed)
+   ngx.req.set_header("sign:", sign)
+
+end
 
 
 ---[[ runs in the 'access_by_lua_block'
@@ -65,7 +130,9 @@ function plugin:access(plugin_conf)
   -- your custom code here
   kong.log.inspect(plugin_conf)   -- check the logs for a pretty-printed config!
   ngx.req.set_header(plugin_conf.request_header, "this is on a request")
-  ngx.req.set_header("md5", "this is a md5")
+  -- ngx.req.set_header("md5", "this is a md5")
+
+  gen_digest(plugin_conf)
 
 end --]]
 
