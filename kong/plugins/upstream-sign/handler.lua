@@ -96,12 +96,12 @@ local function gen_digest(conf)
      -- headers = kong.request.get_headers()
      -- c7b5a9f76c4825c45cf845f179a93b15app_key28439329fieldstid,type,status,payment,orders,rx_audit_statusformatjsonmethodtaobao.trades.sold.getsession6102b27beeddc94be349c92a87d3e72889f1ebf106b24942206381427828sign_methodmd5timestamp1600962986224v2.0c7b5a9f76c4825c45cf845f179a93b15'
    local params = {      
-        app_key = "28439329",
+        app_key = "XXXXX",
         fields = "tid,type,status,payment,orders,rx_audit_status",
         format = "json",
         method = "taobao.trades.sold.get",
         sign_method = "md5",
-        session = "6102b27beeddc94be349c92a87d3e72889f1ebf106b24942206381427828",       
+        session = "XXXXXXXX",       
         timestamp = gen_timestamp(),
         v = "2.0"
     }
